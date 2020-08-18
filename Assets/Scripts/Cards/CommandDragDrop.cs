@@ -16,7 +16,7 @@ namespace Cards
 
         [HideInInspector] public List<Card> cards;
         private void Start() {
-            slots = (CardSlot[])FindObjectsOfType(typeof(CardSlot));
+            // slots = (CardSlot[])FindObjectsOfType(typeof(CardSlot));
         }
         public void Drop(Card card)
         {

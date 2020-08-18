@@ -3,7 +3,13 @@ guid: bbe6654ecad709312abadd53fc4ee7e8
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - map: {instanceID: 0}
+  - preview: {instanceID: 0}
+  - filename: {instanceID: 0}
+  - tileProperties: {instanceID: 0}
+  - textBoxPrefab: {fileID: 5139935262388892156, guid: 43d583835fd3463d4b1051e7b055f853,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

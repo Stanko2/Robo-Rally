@@ -27,7 +27,7 @@ public class NetworkPlayer : NetworkBehaviour {
             _mapName = MultiplayerController.Instance.discovery.mapName;
             SceneManager.sceneLoaded += (scene, loadSceneMode) =>
             {
-                if(scene.name == "Lobby")LobbyLoaded();
+                if(scene.name == "Lobby") LobbyLoaded();
                 if(scene.name == "Main" && GameController.SinglePlayer) GameController.Instance.startButton.onClick.AddListener(SetCardsReady);
             };
             
@@ -38,7 +38,7 @@ public class NetworkPlayer : NetworkBehaviour {
         DontDestroyOnLoad(gameObject);
     }
 
-    void LobbyLoaded(){
+    private void LobbyLoaded(){
         CmdAddPlayer(netIdentity, !isServer);
     }
 
@@ -86,11 +86,13 @@ public class NetworkPlayer : NetworkBehaviour {
     private void CmdAddPlayer(NetworkIdentity player, bool sendMap){
         NetworkPlayer p = player.GetComponent<NetworkPlayer>();
         p.playerIndex = NetworkManager.singleton.numPlayers - 1;
-        Debug.Log(p.playerIndex);
+//        Debug.Log(p.playerIndex);
         // Transform slotTransform = GameObject.Find("PlayerSlots").transform.GetChild(p.PlayerIndex);
-        GameObject go = Instantiate(playerSlotPrefab);
+        var go = Instantiate(playerSlotPrefab);
         go.name = $"Player {p.playerIndex}";
         NetworkServer.Spawn(go, player.connectionToClient);
+        go.GetComponent<LobbyPlayer>().player = this;
+        p.player = go.GetComponent<LobbyPlayer>();
         _playerSlots.Add(go.GetComponent<NetworkIdentity>());
         Players.Add(player);
         RpcShowPlayer(p.playerIndex, go.GetComponent<NetworkIdentity>());
@@ -150,7 +152,6 @@ public class NetworkPlayer : NetworkBehaviour {
                     {
                         GameController.Instance.localPlayer = this;
                         GameController.Instance.mapName = _mapName;
-                        Debug.Log(_mapName);
                         GameController.Instance.startButton.onClick.AddListener(SetCardsReady);
                     };
                 }

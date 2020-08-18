@@ -21,7 +21,7 @@ public class MultiplayerController : MonoBehaviour
     Dictionary<long, ServerConfig> _servers;
     public static MultiplayerController Instance;
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
         network = NetworkManager.singleton;
         discovery = network.GetComponent<ServerDiscovery>();
@@ -48,7 +48,7 @@ public class MultiplayerController : MonoBehaviour
     public void Join(ServerConfig server){
         network.StartClient(server.info.uri);
         discovery.StopDiscovery();
-        //SceneManager.LoadScene("Lobby");
+        SceneManager.LoadScene("Lobby");
     }
 
     private void Host(){
@@ -58,7 +58,7 @@ public class MultiplayerController : MonoBehaviour
         discovery.serverName = nameTextBox.Value;
         network.maxConnections = maxPlayersTextBox.Value;
         InvokeRepeating(nameof(UpdateServer), 0, 1);
-        //SceneManager.LoadScene("Lobby");
+        SceneManager.LoadScene("Lobby");
         discovery.AdvertiseServer();
         SceneManager.sceneLoaded += (scene, loadSceneMode) => {if(scene.name == "Lobby") LobbyLoaded();};
     }

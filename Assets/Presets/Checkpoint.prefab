@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 1735497109352013056}
   m_Layer: 0
   m_Name: Checkpoint
-  m_TagString: Untagged
+  m_TagString: Map
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 69
@@ -117,7 +117,7 @@ MonoBehaviour:
     type: 3}
   walls: 
   robot: {fileID: 0}
-  indexText: {fileID: 0}
+  indexText: {fileID: 3544793770182366939}
   index: 0
   healthRegenerated: 0
 --- !u!1 &1952772423748727085

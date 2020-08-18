@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -7,7 +9,9 @@ namespace Map
     [Serializable]
     public class MapTile : MonoBehaviour{
         public static bool Editing;
+        public static Transform PropertiesParent;
         public Vector2 coords;
+        public static GameObject TextBoxPrefab;
         private int _direction;
         public int Direction
         {
@@ -31,7 +35,7 @@ namespace Map
         protected Map Map;
         protected virtual void Start()
         {
-            Map = GameController.Instance.map;
+            Map = Editing ? transform.parent.GetComponent<Map>() : GameController.Instance.map;
             var material = GetComponent<MeshRenderer>().material;
             GetComponent<MeshRenderer>().material = new Material(material);
             if(!Editing) GameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
@@ -46,6 +50,16 @@ namespace Map
             }
         }
 
+        public virtual void ShowTilePropertiesUi() { }
+
+        public virtual void HidePropertiesUi()
+        {
+            for (var i = 0; i < PropertiesParent.childCount; i++)
+            {
+                var property = PropertiesParent.GetChild(i);
+                Destroy(property.gameObject);
+            }
+        }
         public virtual void OnRobotArrive() { }
 
         public virtual void Rotate(){
@@ -58,6 +72,21 @@ namespace Map
                 go.SetActive(newWalls[i]);
             }
             walls = newWalls;
+        }
+
+        protected static TextBox ShowProperty(object instance, string propertyName)
+        {
+            var type = instance.GetType();
+            var field = type.GetField(propertyName); 
+            if(field == null) return null;
+            var textBox = Instantiate(TextBoxPrefab, PropertiesParent).GetComponent<TextBox>();
+            if (field.FieldType == typeof(int)) textBox.textBoxMode = TextBox.TextBoxMode.Int;
+            else if (field.FieldType == typeof(string)) textBox.textBoxMode = TextBox.TextBoxMode.String;
+            else if (field.FieldType == typeof(float)) textBox.textBoxMode = TextBox.TextBoxMode.Float;
+            textBox.defaultValue = field.GetValue(instance).ToString();
+            textBox.OnChangeValue += value => field.SetValue(instance,value);
+            textBox.propertyName = propertyName;
+            return textBox;
         }
     }
 }

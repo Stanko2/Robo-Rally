@@ -113,11 +113,11 @@ RectTransform:
   m_Father: {fileID: 5139935262388892155}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 25}
-  m_Pivot: {x: 0.5, y: 0}
+  m_SizeDelta: {x: 150, y: -0.0000009536743}
+  m_Pivot: {x: 1, y: 0.5}
 --- !u!222 &5139935260603582884
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -339,11 +339,11 @@ RectTransform:
   m_Father: {fileID: 5139935262388892155}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 30}
-  m_Pivot: {x: 0, y: 1}
+  m_SizeDelta: {x: 110, y: 0}
+  m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &5139935261282419281
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -378,15 +378,13 @@ MonoBehaviour:
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
-    m_Alignment: 0
+    m_Alignment: 3
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 'Max Collisions
-
-'
+  m_Text: Textbox
 --- !u!1 &5139935262388892156
 GameObject:
   m_ObjectHideFlags: 0
@@ -423,7 +421,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 260, y: 45}
+  m_SizeDelta: {x: 260, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5139935262388892154
 MonoBehaviour:
@@ -438,5 +436,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inputField: {fileID: 5139935260603582886}
-  DefaultValue: 
+  defaultValue: 
   textBoxMode: 0

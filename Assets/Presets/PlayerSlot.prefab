@@ -149,7 +149,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 664c16dff47648548b74ac017633398f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  skinIndex: 2
+  skinIndex: 0
   skins:
   - {fileID: 2100000, guid: bd2d742ee2ce7a740ae0cf992a38be74, type: 2}
   - {fileID: 2100000, guid: 6cfe423139c361a459da7ed9831d4b1c, type: 2}

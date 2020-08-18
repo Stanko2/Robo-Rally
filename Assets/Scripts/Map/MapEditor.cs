@@ -1,5 +1,4 @@
-using System.Data;
-using System.Runtime.Serialization.Formatters.Binary;
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -7,21 +6,27 @@ using UnityEngine.UI;
 
 namespace Map
 {
+    public enum BuildMode { Build, Edit}
     public class MapEditor : MonoBehaviour {
         public Map map;
         public GameObject preview;
-        [FormerlySerializedAs("Filename")] public InputField filename;
-        public int width,height;
         public TileTemplate[] tileTemplates;
-        MapTile _selected;
-        int _direction;
-        int _selectedIndex;
+        public Transform tileProperties;
+        public GameObject textBoxPrefab;
+        private MapTile _selected;
+        private MapTile _prevSelected;
+        private int _direction;
+        private int _selectedIndex;
         private Camera _camera;
+
+        public BuildMode buildMode = BuildMode.Build;
         // TODO: Make UI for Tile Properties
         private void Start() {
             _camera = Camera.main;
             map.templates = tileTemplates;
             MapTile.Editing = true;
+            MapTile.PropertiesParent = tileProperties;
+            MapTile.TextBoxPrefab = textBoxPrefab;
             map.InitMap();
             preview.GetComponent<MeshRenderer>().material.color = Color.red;
             Select(0);
@@ -35,11 +40,12 @@ namespace Map
             //     }
             // }
         }
-        public void Save(){
-            if(filename.text != ""){
-                Saver.Save(TileCollection.Create(map), filename.text);
-                SceneManager.LoadScene("Menu");
-            }
+        public void Save()
+        {
+            string filename = map.name;
+            if (filename == "") return;
+            Saver.Save(TileCollection.Create(map), filename);
+            SceneManager.LoadScene("Menu");
         }
         public void Select(int index){
             tileTemplates[_selectedIndex].buildButton.GetComponent<RawImage>().color = Color.white;
@@ -48,20 +54,57 @@ namespace Map
         }
         private void Update() {
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
-            if(_selected) _selected.gameObject.SetActive(true);
+            if(_selected)
+            {
+                _selected.gameObject.SetActive(true);
+                if(buildMode == BuildMode.Edit && _prevSelected) _prevSelected.GetComponent<MeshRenderer>().material.color = Color.white;
+            }
             if (!Physics.Raycast(ray, out var hit, Mathf.Infinity, LayerMask.GetMask("Default"))) return;
             _selected = hit.collider.GetComponent<MapTile>();
-            Vector2 pos = _selected.coords;
-            SetPreview();
-            if (Input.GetKeyDown(KeyCode.Mouse0))
+            if (!_selected)
             {
-                Place(pos);
+                //preview.SetActive(false);
+                return;
             }
-            else if (Input.GetKeyDown(KeyCode.Mouse1))
+            var pos = _selected.coords;
+            switch (buildMode)
             {
-                _direction++;
-                _direction %= 4;
+                case BuildMode.Build:
+                {
+                    SetPreview();
+                    if (Input.GetKeyDown(KeyCode.Mouse0))
+                    {
+                        Place(pos);
+                    }
+                    else if (Input.GetKeyDown(KeyCode.Mouse1))
+                    {
+                        _direction++;
+                        _direction %= 4;
+                    }
+
+                    break;
+                }
+                case BuildMode.Edit:
+                    if (Input.GetKeyDown(KeyCode.Mouse0) && _selected != _prevSelected)
+                    {
+                        _selected.GetComponent<MeshRenderer>().material.color = Color.yellow;
+                        if(_prevSelected != null) _prevSelected.HidePropertiesUi();
+                        _selected.ShowTilePropertiesUi();   
+                        _prevSelected = _selected;
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
+        }
+
+        public void Build(){
+            buildMode = BuildMode.Build;
+            preview.SetActive(true);
+        }
+        public void Edit(){
+            buildMode = BuildMode.Edit;
+            preview.SetActive(false);
         }
 
         private void Place(Vector2 pos)
@@ -86,7 +129,6 @@ namespace Map
                 }
                 else
                 {
-                
                     var dir = Robot.directions[_direction] * .9f;
                     Instantiate(tileTemplates[_selectedIndex].tile,
                         _selected.transform.position + new Vector3(dir.x, .6f, dir.y),

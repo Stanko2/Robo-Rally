@@ -58,7 +58,7 @@ RectTransform:
   m_GameObject: {fileID: 3575768445467304695}
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
+  m_LocalScale: {x: 0.01, y: -0.01, z: 0.01}
   m_Children:
   - {fileID: 8808145423040982003}
   m_Father: {fileID: 5336417367302307193}
@@ -382,11 +382,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 664c16dff47648548b74ac017633398f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  skinIndex: 2
+  skinIndex: 0
   skins:
-  - {fileID: 2100000, guid: 92505bc23bbf12392ad9f00f601972e8, type: 2}
+  - {fileID: 2100000, guid: 027cb3d3d7dc79d41ad763e01759de07, type: 2}
   - {fileID: 2100000, guid: 6cfe423139c361a459da7ed9831d4b1c, type: 2}
-  - {fileID: 2100000, guid: bd2d742ee2ce7a740ae0cf992a38be74, type: 2}
+  - {fileID: 2100000, guid: 92505bc23bbf12392ad9f00f601972e8, type: 2}
   renderers:
   - {fileID: 5336417367304077289}
   - {fileID: 5336417367304077295}
@@ -418,6 +418,7 @@ MonoBehaviour:
   canvas: {fileID: 3873066840558335203}
   nameText: {fileID: 1462941684813064580}
   skinIndex: 0
+  RobotName: 
 --- !u!114 &2856012175296536166
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -430,7 +431,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ac2be12913142b59c52c8cca63f0b7c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  health: 5
   bulletPrefab: {fileID: 694096411544843623, guid: 4bbb2335925acf2c1a13cccfaaa59819,
     type: 3}
   shootTransform: {fileID: 8291063862017599502}

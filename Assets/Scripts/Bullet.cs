@@ -7,6 +7,7 @@ public class Bullet : MonoBehaviour
     private void FixedUpdate()
     {
         transform.position += -transform.up * (moveSpeed * Time.fixedDeltaTime);
+        if(!GameController.Instance.map.MapBounds.Contains(transform.position)) Destroy(gameObject);
     }
 
     private void OnTriggerEnter(Collider other)

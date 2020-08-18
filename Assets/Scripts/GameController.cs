@@ -79,6 +79,7 @@ public class GameController : NetworkBehaviour
                 robots[i].owningPlayerIndex = i;
                 robots[i].RobotName = player.playerName;
                 robots[i].skinIndex = player.skinIndex;
+                //robots[i].OnStartServer();
             }
             else
             {

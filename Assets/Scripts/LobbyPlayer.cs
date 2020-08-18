@@ -18,9 +18,9 @@ public class LobbyPlayer : NetworkBehaviour
     [FormerlySerializedAs("Next")] public Button next;
     [FormerlySerializedAs("Prev")] public Button prev;
     public int skinIndex;
-    Button _startButton;
-    Button _exitButton;
-    bool _ready = false;
+    private Button _startButton;
+    private Button _exitButton;
+    private bool _ready = false;
     public override void OnStartClient(){
         canvas.worldCamera = Camera.main;
         customizeUi.SetActive(hasAuthority);
@@ -39,8 +39,9 @@ public class LobbyPlayer : NetworkBehaviour
     private void Update() {
         if(_startButton) _startButton.interactable = nameField.text.Length > 0 && !_ready;
     }
-    void Leave(){
-        GameObject go = NetworkManager.singleton.gameObject;
+
+    private static void Leave(){
+        var go = NetworkManager.singleton.gameObject;
         NetworkManager.Shutdown();
         
         Destroy(go);

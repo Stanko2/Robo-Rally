@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 1
+  m_Fog: 0
   m_FogColor: {r: 0.65080994, g: 0.666729, b: 0.7075472, a: 1}
   m_FogMode: 3
   m_FogDensity: 0.05
@@ -1331,6 +1331,11 @@ MonoBehaviour:
   rotSpeed: 5
   moveSpeed: 5
   localPlayer: {fileID: 0}
+  minY: 5
+  maxY: 30
+  minRot: 60
+  maxRot: 90
+  zoomSpeed: 5
 --- !u!20 &1687258584
 Camera:
   m_ObjectHideFlags: 0
@@ -1357,7 +1362,7 @@ Camera:
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 60
-  orthographic: 1
+  orthographic: 0
   orthographic size: 6.97
   m_Depth: -1
   m_CullingMask:
@@ -1668,11 +1673,11 @@ MonoBehaviour:
   isDragging: 0
   dragging: {fileID: 0}
   slots:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 487564418}
+  - {fileID: 1017443154}
+  - {fileID: 846973700}
+  - {fileID: 212163909}
+  - {fileID: 686438159}
   active: 0
   cards: []
 --- !u!1 &1942157331

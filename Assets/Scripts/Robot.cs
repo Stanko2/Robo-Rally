@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.AccessControl;
 using Cards;
 using Map;
@@ -25,56 +26,33 @@ public class Robot : NetworkBehaviour
     public Transform canvas;
     private Transform _camera;
     public TextMeshProUGUI nameText;
-    private string _name;
-    public int skinIndex = 0;
+    [SyncVar(hook = "SetSkin")] public int skinIndex;
     private bool _dead = false;
     private Checkpoint _checkpoint;
     public int CheckpointsCount { get; private set; }
     public RobotHealth Health { get; private set; }
     
     public bool IsDead => _dead;
+    [SyncVar(hook = "SetName")] public string RobotName;
 
-    public string RobotName
+    private void SetName(string old, string name)
     {
-        get => _name;
-        set
-        {
-            _name = value;
-            nameText.text = value;
-        }
+        nameText.text = name;
     }
 
+    private void SetSkin(int old, int skin)
+    {
+        GetComponent<RobotSkin>().SetSkin(skin);
+        Debug.Log("Skin set");
+    }
     private bool IsOnlyRobotOnPosition
     {
         get
         {
-            foreach (var robot in GameController.Instance.robots)
-            {
-                if(robot == this) continue;
-                if (robot.pos == pos) return false;
-            }
-            
-            return true;
+            return GameController.Instance.robots.Where(robot => robot != this).All(robot => robot.pos != pos);
         }
     }
-    [ClientRpc]
-    private void RpcGetNameAndSkin(string playerName, int skin)
-    {
-        RobotName = playerName;
-        GetComponent<RobotSkin>().SetSkin(skin);
-    }
-    public override void OnStartAuthority()
-    {
-        base.OnStartAuthority();
-        CmdRequestNameAndSkin();   
-    }
-    
-    [Command]
-    private void CmdRequestNameAndSkin()
-    {
-        RpcGetNameAndSkin(RobotName, skinIndex);
-    }
-    
+
     // Start is called before the first frame update
     public void Init()
     {
@@ -87,7 +65,7 @@ public class Robot : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        //canvas.LookAt(_camera, -Vector3.up);
+        canvas.LookAt(_camera, -Vector3.forward);
     }
 
     public void OnCheckpointArrive(Checkpoint checkpoint, bool finished)
@@ -214,9 +192,9 @@ public class Robot : NetworkBehaviour
     public IEnumerator RotateToDir(int targetHeading){
         moving = true;
         int rot = Mod(targetHeading,4);
-        int deltaAngle = rot - heading;
-        float angleStep = Mathf.Lerp(heading*90, (heading + Mod(deltaAngle,4))*90, moveTime*Time.fixedDeltaTime) - 90*heading;
-        if(deltaAngle < 0) angleStep = Mathf.Lerp(heading*90, (heading - Mod(deltaAngle,4))*90, moveTime*Time.fixedDeltaTime) - 90*heading;
+        int deltaAngle = Mod(rot - heading, 4);
+        float angleStep = Mathf.Lerp(heading*90, (heading + deltaAngle)*90, moveTime*Time.fixedDeltaTime) - 90*heading;
+        if(deltaAngle > 2) angleStep = Mathf.Lerp(heading*90, (heading - Mod(- deltaAngle,4))*90, moveTime*Time.fixedDeltaTime) - 90*heading;
         for (int i = 0; i < moveTime/Time.fixedDeltaTime; i++)
         {
             transform.rotation *= Quaternion.Euler(new Vector3(0,angleStep, 0));

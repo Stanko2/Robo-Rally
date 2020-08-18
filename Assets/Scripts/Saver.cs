@@ -14,7 +14,7 @@ public static class Saver{
     }
     public static string TemporaryPath{ get {return Path.GetTempPath(); } }
     public static void Save(TileCollection data, string name){
-        XmlSerializer xml = new XmlSerializer(typeof(TileCollection), new System.Type[]{typeof(SerializedTile)});
+        XmlSerializer xml = new XmlSerializer(typeof(TileCollection), new System.Type[]{typeof(SerializedTile), typeof(SerializedConveyorBelt), typeof(SerializedCheckpoint)});
         if(!Directory.Exists(MapSavePath)) Directory.CreateDirectory(MapSavePath);
         if(File.Exists($"{MapSavePath}/{name}.rbl")) File.Delete($"{MapSavePath}/{name}.rbl");
         // File.WriteAllText($"{MapSavePath}/{Name}.rbl", JsonUtility.ToJson(data));
@@ -33,7 +33,7 @@ public static class Saver{
     }
 
     public static TileCollection Load(string name){
-        XmlSerializer xml = new XmlSerializer(typeof(TileCollection));
+        XmlSerializer xml = new XmlSerializer(typeof(TileCollection), new System.Type[]{typeof(SerializedTile), typeof(SerializedConveyorBelt), typeof(SerializedCheckpoint)});
         if(!File.Exists($"{MapSavePath}/{name}.rbl")) return null;
         using(FileStream stream = File.Open($"{MapSavePath}/{name}.rbl",FileMode.Open)){
             TileCollection tiles = (TileCollection)xml.Deserialize(stream);
@@ -105,48 +105,40 @@ public class TileCollection{
         {
             for (var j = 0; j < c.height; j++)
             {
-                c.tiles[i + c.width * j] = new SerializedTile(map.tiles[i,j].walls, map.tiles[i,j].buildIndex, map.tiles[i,j].Direction);                
+                if (map.tiles[i,j] is Map.ConveyorBelt)
+                    c.tiles[i + c.width * j] = new SerializedConveyorBelt(map.tiles[i,j].walls, map.tiles[i,j].buildIndex, map.tiles[i,j].Direction);
+                else if (map.tiles[i,j] is Map.Checkpoint)
+                    c.tiles[i + c.width * j] = new SerializedCheckpoint(map.tiles[i,j].walls, map.tiles[i,j].buildIndex, map.tiles[i,j].Direction, (map.tiles[i,j] as Map.Checkpoint).index);
+                else
+                    c.tiles[i + c.width * j] = new SerializedTile(map.tiles[i,j].walls, map.tiles[i,j].buildIndex, map.tiles[i,j].Direction);
             }
         }
         return c;
     }
     public TileCollection() {}
-    // public TileCollection(){
-    //     width = 10;
-    //     height = 10;
-    //     StartX = 0;
-    //     StartY = 0;
-    //     tiles = new SerializedTile[width * height];
-    //     for (int i = 0; i < width; i++)
-    //     {
-    //         for (int j = 0; j < height; j++)
-    //         {
-    //             tiles[i + width * j] = new SerializedTile();                
-    //         }
-    //     }
-    // }
 }
 
 [System.Serializable]
 public class SerializedTile{
-    [FormerlySerializedAs("Walls")] public bool[] walls;
+    public bool[] walls;
     public int buildIndex;
-    [FormerlySerializedAs("Direction")] public int direction;
+    public int direction;
     public SerializedTile(bool[] walls, int buildIndex, int dir){
         direction = dir;
         this.walls = walls;
         this.buildIndex = buildIndex;
     }
-    // public SerializedTile(){
-    //     Direction = 0;
-    //     Walls = new bool[]{false,false, false, false};
-    //     buildIndex = 0;
-    // }
     public SerializedTile(){}
 }
 
 public class SerializedConveyorBelt : SerializedTile{
-    public SerializedConveyorBelt(bool[] walls, int buildindex, int dir) : base(walls, buildindex, dir){
-        
+    public SerializedConveyorBelt(bool[] walls, int buildindex, int dir) : base(walls, buildindex, dir){}
+    public SerializedConveyorBelt() {}
+}
+public class SerializedCheckpoint : SerializedTile{
+    public int checkpointIndex;
+    public SerializedCheckpoint(bool[] walls, int buildindex, int dir, int checkpointIndex) : base(walls, buildindex, dir){
+        this.checkpointIndex = checkpointIndex;
     }
+    public SerializedCheckpoint() {}
 }
