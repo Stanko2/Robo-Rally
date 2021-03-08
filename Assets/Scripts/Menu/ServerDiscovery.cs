@@ -14,13 +14,13 @@ public class ServerDiscovery : NetworkDiscoveryBase<GameRequest, GameResponse>
     public event GameFound OnGameFound;
     public Transport transport;
     private long ServerId{get; set;}
-    [FormerlySerializedAs("ServerName")] [HideInInspector]
+    [HideInInspector]
     public string serverName;
-    [FormerlySerializedAs("MaxPlayers")] [HideInInspector]
+    [HideInInspector]
     public int maxPlayers;
-    [FormerlySerializedAs("Players")] [HideInInspector]
+    [HideInInspector]
     public int players;
-    [FormerlySerializedAs("MapName")] [HideInInspector]
+    [HideInInspector]
     public string mapName;
     // Start is called before the first frame update
     public override void Start()

@@ -11,9 +11,8 @@ using UnityEngine.Serialization;
 public delegate void Init();
 public class GameController : NetworkBehaviour
 {
-
+    private static Player localPlayer => Player.LocalPlayer;
     public static event Init GameControllerInitialized;
-    [FormerlySerializedAs("LocalPlayer")] public NetworkPlayer localPlayer;
     public CardSlot[] slots;
     public Command[] commandTemplates;
     public Robot[] robots;
@@ -24,7 +23,7 @@ public class GameController : NetworkBehaviour
     [FormerlySerializedAs("ExecutionHighlight")] public Color executionHighlight;
     private List<Card> _cards;
     private CameraMover _mover;
-    [FormerlySerializedAs("MapName")] public string mapName;
+    public Match Match;
     public Map.Map map;
     public static GameController Instance;
     [FormerlySerializedAs("PlayersReady")] public int playersReady;
@@ -41,45 +40,45 @@ public class GameController : NetworkBehaviour
         GameControllerInitialized?.Invoke();
     }
     public override void OnStartClient(){
-        map.name = mapName;
-        map.InitMap();
-        if(!isServer) {
-            robots = (Robot[])FindObjectsOfType(typeof(Robot));
-            System.Array.Sort(robots, (a, b) => a.owningPlayerIndex.CompareTo(b.owningPlayerIndex));
-        } 
-        _mover = Camera.main.GetComponent<CameraMover>();
+        if(!isServer) map.InitMap(Match.Settings.mapData);
+        robots = (Robot[])FindObjectsOfType(typeof(Robot));
+        System.Array.Sort(robots, (a, b) => a.owningPlayerIndex.CompareTo(b.owningPlayerIndex));
+        if (Camera.main != null) _mover = Camera.main.GetComponent<CameraMover>();
         _mover.localPlayer = robots[localPlayer.playerIndex].transform;
         foreach (var robot in robots)
         {   
-            robot.transform.position = 2*new Vector3(map.startLocation.x,0,map.startLocation.y);
-            robot.pos = map.startLocation;
+            robot.transform.position = 2*new Vector3(map.start.coords.x,0,map.start.coords.y);
+            robot.pos = map.start.coords;
             robot.map = map;   
             robot.Init();
+            robot.OnCheckpointArrive(map.start, false);
         }
         localPlayer.CmdNextPhase();
     }
     // Start is called before the first frame update
     public override void OnStartServer()
     {
-        robots = new Robot[NetworkManager.singleton.numPlayers];
+        map.InitMap(Match.Settings.mapData);
+        Match = Matchmaker.Instance.Matches.Find(e => e.MatchId == Match.MatchId);
+        var Players = Match.Players;
+        robots = new Robot[Players.Count];
         Command.Random = new System.Random(Random.Range(0,int.MaxValue));
         if (SinglePlayer)
         {
-            localPlayer = (NetworkPlayer) FindObjectOfType(typeof(NetworkPlayer));
-            NetworkPlayer.Players.Add(localPlayer.netIdentity);
+            Match = new Match();
+            Match.Players.Add(localPlayer.gameObject);
         }
-        for (int i = 0; i < NetworkManager.singleton.numPlayers; i++)
+        for (int i = 0; i < Players.Count; i++)
         {
-            GameObject go = Instantiate(robotPrefab, 2*new Vector3(map.startLocation.x, 0, map.startLocation.y), Quaternion.identity);
+            GameObject go = Instantiate(robotPrefab, 2*new Vector3(map.start.coords.x, 0, map.start.coords.y), Quaternion.identity);
             robots[i] = go.GetComponent<Robot>();
             if (!SinglePlayer)
             {
-                NetworkServer.Spawn(go, NetworkPlayer.Players[i].connectionToClient);
-                NetworkPlayer player = NetworkPlayer.Players[i].GetComponent<NetworkPlayer>();
+                NetworkServer.Spawn(go, Players[i].GetComponent<NetworkIdentity>().connectionToClient);
+                Player player = Players[i].GetComponent<Player>();
                 robots[i].owningPlayerIndex = i;
-                robots[i].RobotName = player.playerName;
-                robots[i].skinIndex = player.skinIndex;
-                //robots[i].OnStartServer();
+                robots[i].RobotName = player.PlayerName;
+                robots[i].skinIndex = player.SkinIndex;
             }
             else
             {
@@ -100,8 +99,8 @@ public class GameController : NetworkBehaviour
         if (!SinglePlayer) yield return new WaitUntil(() => AllPlayersReady);
         else yield return null;
         
-        if(cardStack.Count < NetworkPlayer.Players.Count * 9) ShuffleCards();
-        for (int i = 0; i < NetworkPlayer.Players.Count; i++)
+        if(cardStack.Count < Match.Players.Count * 9) ShuffleCards();
+        for (int i = 0; i < Match.Players.Count; i++)
         {
             List<CardInfo> c = new List<CardInfo>();
             for (int j = 0; j < robots[i].GetComponent<RobotHealth>().Health + 4; j++)
@@ -109,7 +108,7 @@ public class GameController : NetworkBehaviour
                 c.Add(cardStack.Pop().ToCardInfo());
             }
 
-            if (!SinglePlayer) TargetGetCards(NetworkPlayer.Players[i].connectionToClient, c.ToArray());
+            if (!SinglePlayer) TargetGetCards(c.ToArray());
             else StartCoroutine(GetCards(c.Select(Command.FromCardInfo).ToArray()));
         }
     }
@@ -136,7 +135,7 @@ public class GameController : NetworkBehaviour
     }
 
     [TargetRpc]
-    void TargetGetCards(NetworkConnection conn, CardInfo[] cards)
+    void TargetGetCards(CardInfo[] cards)
     {
         var c = new Command[cards.Length];
         for (int i = 0; i < cards.Length; i++)
@@ -276,7 +275,7 @@ public class GameController : NetworkBehaviour
     {
         get
         {
-            return NetworkPlayer.Players.All(player => player.GetComponent<NetworkPlayer>().nextPhaseReady);
+            return Instance.Match.Players.All(e=>e.GetComponent<Player>().nextPhaseReady);
         }
     }
 

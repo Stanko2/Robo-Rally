@@ -17,11 +17,9 @@ public class RobotSkin : MonoBehaviour
     public void SetSkin(int newIndex)
     {
         newIndex = Robot.Mod(newIndex, skins.Length);
-        Debug.Log($"Skin set to {newIndex}");
         foreach (var meshRenderer in renderers)
         {
             var sharedMaterials = meshRenderer.sharedMaterials;
-            Debug.Log(sharedMaterials.Length);
             for (var i = 0; i < meshRenderer.sharedMaterials.Length; i++)
             {
                 var material = sharedMaterials[i];

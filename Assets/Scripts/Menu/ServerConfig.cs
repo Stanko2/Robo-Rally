@@ -1,9 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
+﻿using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class ServerConfig : MonoBehaviour
 {
@@ -30,7 +27,7 @@ public class ServerConfig : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        playersText.text = info.Players.ToString() + " / " + info.MaxPlayers.ToString();
+        playersText.text = info.Players + " / " + info.MaxPlayers;
         joinButton.interactable = info.Players < info.MaxPlayers;
     }
 }

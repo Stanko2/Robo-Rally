@@ -2,25 +2,25 @@ using UnityEngine;
 using Mirror;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
 using UnityEngine.Serialization;
 
 public class NetworkPlayer : NetworkBehaviour {
     public LobbyPlayer player;
     [FormerlySerializedAs("PlayerSlotPrefab")] public GameObject playerSlotPrefab;
-    [FormerlySerializedAs("GameControllerPrefab")] public GameObject gameControllerPrefab;
-    public Robot robot;
     [FormerlySerializedAs("PlayerIndex")] public int playerIndex;
     static int _playersReady;
     private static string _mapName;
     [FormerlySerializedAs("CardsReady")] public bool cardsReady;
     [FormerlySerializedAs("NextPhaseReady")] public bool nextPhaseReady;
     public static List<NetworkIdentity> Players;
+    public static NetworkPlayer LocalPlayer;
     private static List<NetworkIdentity> _playerSlots;
     public int skinIndex;
     public string playerName;
-    public override void OnStartLocalPlayer(){            
+    
+    public override void OnStartLocalPlayer()
+    {
+        LocalPlayer = this;
         if(isServer){
             Players = new List<NetworkIdentity>();
             _playerSlots = new List<NetworkIdentity>();
@@ -46,7 +46,6 @@ public class NetworkPlayer : NetworkBehaviour {
     public void CmdSetReady(){
         _playersReady++;
         if (_playersReady != NetworkManager.singleton.numPlayers) return;
-        SceneManager.LoadScene("Main");
         NetworkManager.singleton.ServerChangeScene("Main");
         SceneManager.sceneLoaded += (scene, loadSceneMode) => {
             NetworkServer.SpawnObjects();
@@ -67,7 +66,6 @@ public class NetworkPlayer : NetworkBehaviour {
             commands[i] = GameController.Instance.slots[i].card.command.ToCardInfo();
         }
         cardsReady = true;
-        //Debug.Log("Ready");
         CmdClientReady(playerIndex, commands);
     }
     [Command]
@@ -91,7 +89,7 @@ public class NetworkPlayer : NetworkBehaviour {
         var go = Instantiate(playerSlotPrefab);
         go.name = $"Player {p.playerIndex}";
         NetworkServer.Spawn(go, player.connectionToClient);
-        go.GetComponent<LobbyPlayer>().player = this;
+        //go.GetComponent<LobbyPlayer>().player = this;
         p.player = go.GetComponent<LobbyPlayer>();
         _playerSlots.Add(go.GetComponent<NetworkIdentity>());
         Players.Add(player);
@@ -144,14 +142,14 @@ public class NetworkPlayer : NetworkBehaviour {
         if (isLocalPlayer){ 
             this.playerIndex = playerIndex;
             player = identity.GetComponent<LobbyPlayer>();
-            player.player = this;
+            //player.player = this;
             SceneManager.sceneLoaded += (scene,loadSceneMode) => {
                 if(scene.name == "Main"){
                     Debug.Log("Scene Loaded");
                     GameController.GameControllerInitialized += () => 
                     {
-                        GameController.Instance.localPlayer = this;
-                        GameController.Instance.mapName = _mapName;
+                        //GameController.Instance.localPlayer = this;
+                        
                         GameController.Instance.startButton.onClick.AddListener(SetCardsReady);
                     };
                 }

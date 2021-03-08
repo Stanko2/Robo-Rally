@@ -14,7 +14,7 @@ public static class Saver{
     }
     public static string TemporaryPath{ get {return Path.GetTempPath(); } }
     public static void Save(TileCollection data, string name){
-        XmlSerializer xml = new XmlSerializer(typeof(TileCollection), new System.Type[]{typeof(SerializedTile), typeof(SerializedConveyorBelt), typeof(SerializedCheckpoint)});
+        XmlSerializer xml = new XmlSerializer(typeof(TileCollection), new[]{typeof(SerializedTile), typeof(SerializedConveyorBelt), typeof(SerializedCheckpoint)});
         if(!Directory.Exists(MapSavePath)) Directory.CreateDirectory(MapSavePath);
         if(File.Exists($"{MapSavePath}/{name}.rbl")) File.Delete($"{MapSavePath}/{name}.rbl");
         // File.WriteAllText($"{MapSavePath}/{Name}.rbl", JsonUtility.ToJson(data));
@@ -97,8 +97,6 @@ public class TileCollection{
             width = map.width,
             height = map.height,
             name = map.name,
-            startX = (int) map.startLocation.x,
-            startY = (int) map.startLocation.y
         };
         c.tiles = new SerializedTile[c.width * c.height];
         for (var i = 0; i < c.width; i++)
@@ -129,11 +127,33 @@ public class SerializedTile{
         this.buildIndex = buildIndex;
     }
     public SerializedTile(){}
+
+    public virtual void Write(NetworkWriter writer)
+    {
+        writer.WriteInt32(buildIndex);
+        writer.WriteInt32(direction);
+        foreach (var wall in walls)
+        {
+            writer.WriteBoolean(wall);
+        }
+    }
+
+    public SerializedTile(NetworkReader reader)
+    {
+        buildIndex = reader.ReadInt32();
+        direction = reader.ReadInt32();
+        walls = new bool[4];
+        for (int i = 0; i < 4; i++)
+        {
+            walls[i] = reader.ReadBoolean();
+        }
+    }
 }
 
 public class SerializedConveyorBelt : SerializedTile{
     public SerializedConveyorBelt(bool[] walls, int buildindex, int dir) : base(walls, buildindex, dir){}
     public SerializedConveyorBelt() {}
+    public SerializedConveyorBelt(NetworkReader reader) : base(reader) { }
 }
 public class SerializedCheckpoint : SerializedTile{
     public int checkpointIndex;
@@ -141,4 +161,16 @@ public class SerializedCheckpoint : SerializedTile{
         this.checkpointIndex = checkpointIndex;
     }
     public SerializedCheckpoint() {}
+
+    public SerializedCheckpoint(NetworkReader reader) : base(reader)
+    {
+        checkpointIndex = reader.ReadInt32();
+    }
+        
+
+    public override void Write(NetworkWriter writer)
+    {
+        base.Write(writer);
+        writer.WriteInt32(checkpointIndex);
+    }
 }

@@ -14,8 +14,13 @@ namespace Map
         public MapTile[,] tiles;
         [NonSerialized] public Bounds MapBounds;
         [NonSerialized] private TileCollection _mapData;
-        [FormerlySerializedAs("StartLocation")] public Vector2 startLocation;
-        public void InitMap() {
+        public Checkpoint start;
+        public void InitMap(TileCollection data = null) {
+            if (data != null)
+            {
+                FromTileCollection(data);
+                return;
+            }
             //Debug.Log("Map Loading");
             //Debug.Log(Name);
             if(Saver.Load(name) != null){
@@ -37,7 +42,7 @@ namespace Map
                 }
                 MapBounds = new Bounds(new Vector3(width-1,1,height-1), new Vector3(width*4, 10, height*4));
             }
-            Camera.main.transform.position = new Vector3(startLocation.x, 10, startLocation.y);
+            Camera.main.transform.position = new Vector3(2*start.coords.x, 10, 2*start.coords.y);
             MapInitialized?.Invoke();
         }
         private void FromTileCollection(TileCollection a){
@@ -45,7 +50,6 @@ namespace Map
             width = a.width;
             height = a.height;
             name = a.name;
-            startLocation = a.StartLocation;
             tiles = new MapTile[width, height];
             var checkpoints = 0;
             for (var i = 0; i < width; i++)
@@ -59,10 +63,10 @@ namespace Map
                     tiles[i,j].Direction = a.tiles[i+width*j].direction;
                     if (tiles[i, j] is Checkpoint) {
                         checkpoints++;
-                        var index = (a.tiles[i+width*j] as SerializedCheckpoint).checkpointIndex;
-                        (tiles[i,j] as Checkpoint).index = index;
+                        var index = ((SerializedCheckpoint) a.tiles[i+width*j]).checkpointIndex;
+                        ((Checkpoint) tiles[i,j]).index = index;
                         if (index == 0){
-                            startLocation = new Vector2(i,j);
+                            start = (Checkpoint)tiles[i,j];
                         }
                     }
                 }

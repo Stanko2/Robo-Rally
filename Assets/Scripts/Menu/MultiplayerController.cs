@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
@@ -11,18 +12,25 @@ public class MultiplayerController : MonoBehaviour
 {
     public ServerDiscovery discovery;
     public Button createButton;
+    public Button joinButton;
     public TextBox nameTextBox;
     public TextBox maxPlayersTextBox;
     public Dropdown mapselect;
-    public NetworkManager network;
+    private static NetworkManager network;
     public GameObject serverInfoPrefab;
     public Transform uiJoinPanel;
+    public Toggle onlineMatch;
+    public InputField JoinIDField;
+    public GameObject lobbyPlayerPrefab;
 
     Dictionary<long, ServerConfig> _servers;
     public static MultiplayerController Instance;
     // Start is called before the first frame update
     private void Start()
     {
+        joinButton.interactable = true;
+        createButton.interactable = true;
+        onlineMatch.interactable = !Menu.Local;
         network = NetworkManager.singleton;
         discovery = network.GetComponent<ServerDiscovery>();
         if(Instance != null) Destroy(Instance.gameObject);
@@ -51,25 +59,108 @@ public class MultiplayerController : MonoBehaviour
         SceneManager.LoadScene("Lobby");
     }
 
-    private void Host(){
-        network.StartHost();
+    private void Host()
+    {
+        createButton.interactable = false;
+        joinButton.interactable = false;
         discovery.mapName = mapselect.options[mapselect.value].text;
         discovery.maxPlayers = maxPlayersTextBox.Value;
         discovery.serverName = nameTextBox.Value;
+        if (onlineMatch.isOn)
+        {
+            HostOnlineMatch();
+            return;
+        }
         network.maxConnections = maxPlayersTextBox.Value;
         InvokeRepeating(nameof(UpdateServer), 0, 1);
-        SceneManager.LoadScene("Lobby");
+        network.StartHost();
         discovery.AdvertiseServer();
-        SceneManager.sceneLoaded += (scene, loadSceneMode) => {if(scene.name == "Lobby") LobbyLoaded();};
     }
-
-    private void LobbyLoaded(){
-        NetworkServer.SpawnObjects();
-    }
+    
     void UpdateServer(){
         discovery.players = network.numPlayers;
     }
 
+    public void SpawnLobbyPlayer(Player player)
+    {
+        StartCoroutine(SpawnPlayer(player));
+    }
+
+    private IEnumerator SpawnPlayer(Player player)
+    {
+        yield return new WaitUntil(() => player.playerIndex != -1);
+        var playerObject = Instantiate(lobbyPlayerPrefab);
+        playerObject.name = $"Player {player.playerIndex}";
+        player.lobbyPlayer = playerObject.GetComponent<LobbyPlayer>();
+        player.lobbyPlayer.player = player;
+        if (player.isLocalPlayer)
+        {
+            SceneManager.UnloadSceneAsync(1);
+            var matchIdText = GameObject.Find("MatchIdText").GetComponent<Text>();
+            matchIdText.text = $"Game code: {player.matchID}";
+            player.lobbyPlayer.InitializeAuthority();
+        }
+        else
+        {
+            player.lobbyPlayer.Initialize();
+        }
+        player.lobbyPlayer.AssignTransform(player.playerIndex);
+    }
+
+    private void HostOnlineMatch()
+    {
+        Player.LocalPlayer.HostGame(new MatchSettings()
+        {
+            advertise = onlineMatch.isOn,
+            map = mapselect.options[mapselect.value].text,
+            maxPlayers = maxPlayersTextBox.Value,
+            serverName = nameTextBox.Value
+        });
+        
+    }
+    
+    public void JoinMatch()
+    {
+        joinButton.interactable = false;
+        string id = JoinIDField.text.ToUpper();
+        if (Matchmaker.ValidateID(id))
+        {
+            Player.LocalPlayer.JoinGame(id);
+        }
+        else
+        {
+            Debug.Log("Invalid matchId");
+            joinButton.interactable = true;
+        }
+    }
+    
+    public void FinishedHost(bool success)
+    {
+        if (success)
+        {
+            SceneManager.LoadScene("Lobby", LoadSceneMode.Additive);
+            Debug.Log("Hosted game");
+        }
+        else
+        {
+            joinButton.interactable = true;
+            createButton.interactable = true;
+        }
+    }
+
+    public void FinishedJoin(bool success)
+    {
+        if (success)
+        {
+            Debug.Log("Joined Game");
+            SceneManager.LoadSceneAsync("Lobby", LoadSceneMode.Additive);
+        }
+        else
+            Debug.Log("Match doesn't exist");
+
+        joinButton.interactable = true;
+    }
+    
     private void OnServerFound(GameResponse response){
         if(!_servers.ContainsKey(response.serverId))
         {

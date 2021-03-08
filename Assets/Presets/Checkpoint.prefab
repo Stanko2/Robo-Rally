@@ -120,6 +120,7 @@ MonoBehaviour:
   indexText: {fileID: 3544793770182366939}
   index: 0
   healthRegenerated: 0
+  checkedTexture: {fileID: 2800000, guid: 4677521455e5e98dd985e65a7a79543b, type: 3}
 --- !u!1 &1952772423748727085
 GameObject:
   m_ObjectHideFlags: 0

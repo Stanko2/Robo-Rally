@@ -166,7 +166,7 @@ public class Robot : NetworkBehaviour
     public void Respawn()
     {
         _dead = false;
-        pos = map.startLocation;
+        pos = _checkpoint.coords;
         transform.position = 2 * pos;
         Health.Health = RobotHealth.MaxHealth;
     }
