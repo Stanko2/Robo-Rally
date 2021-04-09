@@ -28,7 +28,7 @@ public class NetworkPlayer : NetworkBehaviour {
             SceneManager.sceneLoaded += (scene, loadSceneMode) =>
             {
                 if(scene.name == "Lobby") LobbyLoaded();
-                if(scene.name == "Main" && GameController.SinglePlayer) GameController.Instance.startButton.onClick.AddListener(SetCardsReady);
+                if(scene.name == "Main" && GameController.SinglePlayer) GameController.instance.startButton.onClick.AddListener(SetCardsReady);
             };
             
         }
@@ -60,17 +60,17 @@ public class NetworkPlayer : NetworkBehaviour {
 
     private void SetCardsReady(){
         if(cardsReady) return;
-        GameController.CardInfo[] commands = new GameController.CardInfo[GameController.Instance.slots.Length];
+        GameController.CardInfo[] commands = new GameController.CardInfo[GameController.instance.slots.Length];
         for (int i = 0; i < commands.Length; i++)
         {
-            commands[i] = GameController.Instance.slots[i].card.command.ToCardInfo();
+            commands[i] = GameController.instance.slots[i].card.command.ToCardInfo();
         }
         cardsReady = true;
         CmdClientReady(playerIndex, commands);
     }
     [Command]
     void CmdClientReady(int clientIndex, GameController.CardInfo[] cards){
-        GameController.Instance.ClientReady(clientIndex, cards);
+        GameController.instance.ClientReady(clientIndex, cards);
     }
 
     [Command]
@@ -146,11 +146,11 @@ public class NetworkPlayer : NetworkBehaviour {
             SceneManager.sceneLoaded += (scene,loadSceneMode) => {
                 if(scene.name == "Main"){
                     Debug.Log("Scene Loaded");
-                    GameController.GameControllerInitialized += () => 
+                    GameController.GameControllerInitialized += (e) => 
                     {
                         //GameController.Instance.localPlayer = this;
                         
-                        GameController.Instance.startButton.onClick.AddListener(SetCardsReady);
+                        e.startButton.onClick.AddListener(SetCardsReady);
                     };
                 }
             };

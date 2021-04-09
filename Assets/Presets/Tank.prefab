@@ -332,6 +332,7 @@ GameObject:
   - component: {fileID: 745662229}
   - component: {fileID: 2856012175296536166}
   - component: {fileID: 5906747888904843350}
+  - component: {fileID: 6493667898632098899}
   m_Layer: 0
   m_Name: Tank
   m_TagString: Robot
@@ -406,7 +407,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  pos: {x: 0, y: 0}
   heading: 0
   moveTime: 1
   idle: 1
@@ -450,6 +450,21 @@ MonoBehaviour:
   serverOnly: 0
   m_AssetId: 
   hasSpawned: 0
+--- !u!114 &6493667898632098899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5336417367301873817}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1020a74962faada4b807ac5dc053a4cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
+  currentMatchDebug: 
 --- !u!1 &5336417367301873819
 GameObject:
   m_ObjectHideFlags: 0

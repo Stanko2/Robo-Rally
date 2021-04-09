@@ -314,12 +314,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b29163770a63daf37a2c4e3acc3cd84c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  JoinButton: {fileID: 8064097057095280743}
-  NameText: {fileID: 1834417795512243606}
-  PlayersText: {fileID: 1834417795729064649}
-  MapText: {fileID: 1834417795406549845}
-  SelectedColor: {r: 1, g: 1, b: 1, a: 1}
-  DeselectedColor: {r: 0.011718929, g: 0.66291296, b: 0.9570001, a: 1}
+  joinButton: {fileID: 8064097057095280743}
+  nameText: {fileID: 1834417795512243606}
+  playersText: {fileID: 1834417795729064649}
+  mapText: {fileID: 1834417795406549845}
 --- !u!222 &1556072286686533606
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -553,4 +551,15 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8583581371922981621}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1834417796926834071}
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2

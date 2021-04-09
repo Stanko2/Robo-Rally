@@ -65,4 +65,5 @@ public class GameResponse : ServerResponse {
     public int MaxPlayers;
     public int Players;
     public string MapName;
+    public string matchId;
 }

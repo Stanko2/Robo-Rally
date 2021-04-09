@@ -21,6 +21,21 @@ public class Menu : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
+        if (Application.isBatchMode)
+        {
+            NetworkManager.singleton.onlineScene = "MultiplayerMenu";
+            NetworkManager.singleton.StartServer();
+            Debug.Log("Server started");
+            Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "");
+            Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, null, "");
+            Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, null, "");
+            Application.logMessageReceived += (logstring, stack, type) =>
+            {
+                Console.WriteLine(logstring);
+            };
+            return;
+        }
+        
         mainPanel.GetComponent<Animation>().Play("UIShow");
         startButton.onClick.AddListener(AiStart);
         quitButton.onClick.AddListener(Quit);
@@ -30,12 +45,12 @@ public class Menu : MonoBehaviour
         {
             NetworkManager.singleton.StartClient();
             Transport.activeTransport.OnClientError.AddListener(FailedToConnect);
+            Transport.activeTransport.OnClientConnected.AddListener(()=>cantConnectUI.SetActive(false));
         }
         catch (Exception e)
         {
             FailedToConnect(e);
         }
-        //SceneManager.sceneLoaded += (scene,loadSceneMode) => NetworkManager.singleton.ServerChangeScene(scene.name);
         
     }
 
@@ -49,22 +64,25 @@ public class Menu : MonoBehaviour
         mainPanel.GetComponent<Animation>().Play("UIClose");
         NetworkManager.singleton.StartHost();
         GameController.SinglePlayer = true;
-        SceneManager.LoadScene("Main");
+        NetworkManager.singleton.autoCreatePlayer = true;
+        NetworkManager.singleton.ServerChangeScene("Main");
         SceneManager.sceneLoaded += (scene, loadSceneMode) => NetworkServer.SpawnObjects();
     }
 
     private void Multiplayer()
     {
-        NetworkManager.singleton.StartClient();
-        SceneManager.LoadSceneAsync("MultiplayerMenu",LoadSceneMode.Additive).completed += e => 
-            GameObject.Find("MultiplayerPanel").GetComponent<Animation>().Play("UIShow");
+        SceneManager.LoadSceneAsync("MultiplayerMenu",LoadSceneMode.Single).completed += e => 
+             GameObject.Find("MultiplayerPanel").GetComponent<Animation>().Play("UIShow");
         mainPanel.GetComponent<Animation>().Play("UIClose");
+        cantConnectUI.SetActive(false);
+        Debug.Log(NetworkClient.active);
     }
 
     public void JoinLocal()
     {
         NetworkManager.singleton.networkAddress = "localhost";
         NetworkManager.singleton.StartClient();
+
         multiplayerButton.interactable = true;     
         cantConnectUI.SetActive(false);
     }

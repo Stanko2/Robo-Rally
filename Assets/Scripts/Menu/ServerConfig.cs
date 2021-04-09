@@ -9,8 +9,6 @@ public class ServerConfig : MonoBehaviour
     [FormerlySerializedAs("NameText")] public Text nameText;
     [FormerlySerializedAs("PlayersText")] public Text playersText;
     [FormerlySerializedAs("MapText")] public Text mapText;
-    [FormerlySerializedAs("SelectedColor")] public Color selectedColor;
-    [FormerlySerializedAs("DeselectedColor")] public Color deselectedColor;
     MultiplayerController _controller;
     // Start is called before the first frame update
     public void Initialize()
@@ -20,8 +18,10 @@ public class ServerConfig : MonoBehaviour
         nameText.text = info.ServerName;
         joinButton.onClick.AddListener(Join);
     }
-    void Join(){
-        _controller.Join(this);
+    void Join()
+    {
+        _controller.JoinIDField.text = info.matchId;
+        _controller.JoinMatch();
     }
 
     // Update is called once per frame

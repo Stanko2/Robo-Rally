@@ -81,6 +81,25 @@ public class MultiplayerController : MonoBehaviour
         discovery.players = network.numPlayers;
     }
 
+    public void RequestMatches()
+    {
+        for (int i = 0; i < uiJoinPanel.childCount; i++)
+        {
+            Destroy(uiJoinPanel.GetChild(i).gameObject);
+        }
+        Player.LocalPlayer.CmdGetAvailableMatches();
+    }
+    
+    public void ShowAvailableMatches(IEnumerable<GameResponse> matches)
+    {
+        foreach (var match in matches)
+        {
+            var config = Instantiate(serverInfoPrefab, uiJoinPanel).GetComponent<ServerConfig>();
+            config.info = match;
+            config.Initialize();
+        }
+    }
+
     public void SpawnLobbyPlayer(Player player)
     {
         StartCoroutine(SpawnPlayer(player));

@@ -2,22 +2,38 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.AccessControl;
 using Cards;
 using Map;
 using UnityEngine;
 using Mirror;
 using TMPro;
+using UnityEngine.UI;
 
 public class Robot : NetworkBehaviour
 {
     public static readonly Vector2[] directions = {Vector2.up, Vector2.right, Vector2.down, Vector2.left};
     public Queue<Command> commands;
-    public Vector2 pos;
-    public int heading = 0;
+    private Vector2 _pos = -Vector2.one;
+    public Vector2 pos
+    {
+        get => _pos;
+        private set
+        {
+            if (pos != -Vector2.one)
+            {
+                map[pos].robot = null;
+                _pos = value;
+                map[pos].robot = this;
+                map[pos].OnRobotArrive();
+            }
+            else _pos = value;
+            transform.position = 2 * new Vector3(pos.x, 0, pos.y);
+        }
+    }
+    public int heading;
     public float moveTime;
     public bool idle = true;
-    public bool moving = false;
+    public bool moving;
     public bool invincible;
     public Map.Map map;
     [SyncVar]
@@ -27,7 +43,7 @@ public class Robot : NetworkBehaviour
     private Transform _camera;
     public TextMeshProUGUI nameText;
     [SyncVar(hook = "SetSkin")] public int skinIndex;
-    private bool _dead = false;
+    private bool _dead;
     private Checkpoint _checkpoint;
     public int CheckpointsCount { get; private set; }
     public RobotHealth Health { get; private set; }
@@ -49,23 +65,35 @@ public class Robot : NetworkBehaviour
     {
         get
         {
-            return GameController.Instance.robots.Where(robot => robot != this).All(robot => robot.pos != pos);
+            return GameController.instance.robots.Where(robot => robot != this).All(robot => robot.pos != pos);
         }
+    }
+
+    public override void OnStartAuthority()
+    {
+        nameText.transform.parent.GetComponent<Image>().color = Color.cyan;
+        base.OnStartAuthority();
     }
 
     // Start is called before the first frame update
     public void Init()
     {
-        _camera = Camera.main.transform;
+        if (Camera.main != null) _camera = Camera.main.transform;
         commands = new Queue<Command>();
-        map[pos].robot = this;
+        pos = map.start.coords;
         Health = GetComponent<RobotHealth>();
+        CheckpointsCount = -1;
     }
 
     // Update is called once per frame
     void Update()
     {
-        canvas.LookAt(_camera, -Vector3.forward);
+        if (_camera != null)
+        {
+            Vector3 cameraToRobot = _camera.position - canvas.position;
+            canvas.transform.rotation = Quaternion.Euler(-Vector3.Angle(Vector3.forward, cameraToRobot),0,0);    
+        }
+        
     }
 
     public void OnCheckpointArrive(Checkpoint checkpoint, bool finished)
@@ -112,7 +140,6 @@ public class Robot : NetworkBehaviour
                     throw new ArgumentOutOfRangeException();
             }
         }
-        //Debug.Log(command);
         yield return new WaitUntil(()=>!moving);
         idle = true;
     }
@@ -127,6 +154,7 @@ public class Robot : NetworkBehaviour
         StartCoroutine(RotateToDir(dir));
     }
 
+    [Client]
     private void Move(Vector2 target, bool backwards = false)
     {
         var canMove = backwards ? CanMove((heading + 2) % 4) : CanMove(heading);
@@ -134,24 +162,24 @@ public class Robot : NetworkBehaviour
         if (!canMove) return;
         StartCoroutine(MoveToPos(target));
         if(invincible) return;
-        var pulling = GameController.Instance.GetRobotAtPosition(target);
+        var pulling = GameController.instance.GetRobotAtPosition(target);
         if (pulling)
         {
             pulling.Move(target + directions[heading]);
         }
     }
     
+    [Client]
     public bool CanMove(int direction){
         var movepos = pos + directions[direction];
         try
         {
             if (!invincible)
             {
-                var r = GameController.Instance.GetRobotAtPosition(movepos);
+                var r = GameController.instance.GetRobotAtPosition(movepos);
                 if (r) return r.CanMove(direction);    
             }
-            if(!map[pos].walls[direction] && !map[movepos].walls[(direction+2) % 4]) return true;
-            return false;
+            return !map[pos].walls[direction] && !map[movepos].walls[(direction+2) % 4];
         }
         catch(IndexOutOfRangeException){
             return false;
@@ -167,12 +195,10 @@ public class Robot : NetworkBehaviour
     {
         _dead = false;
         pos = _checkpoint.coords;
-        transform.position = 2 * pos;
         Health.Health = RobotHealth.MaxHealth;
     }
     public IEnumerator MoveToPos(Vector2 targetPos){
         moving = true;
-        map[pos].robot = null;
         Vector2 m = targetPos - pos;
         Vector3 step = Vector3.Lerp(Vector3.zero, 2*new Vector3(m.x,0,m.y), moveTime*Time.fixedDeltaTime);
         
@@ -181,11 +207,8 @@ public class Robot : NetworkBehaviour
             transform.position += step;
             yield return new WaitForFixedUpdate();
         }
-        pos = targetPos;
-        transform.position = 2*new Vector3(pos.x, 0, pos.y);
-        map[pos].robot = this;
-        map[pos].OnRobotArrive();
         yield return new WaitForSeconds(endMoveWaitTime);
+        pos = targetPos;
         moving = false;
     }
 

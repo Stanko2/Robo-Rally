@@ -55,6 +55,7 @@ Material:
     m_Floats:
     - Boolean_4D471FD9: 0
     - Move: 0
+    - Vector1_AC6FB26A: 0
     - Vector1_D8DC7420: 1
     - _AlphaClip: 0
     - _Blend: 0

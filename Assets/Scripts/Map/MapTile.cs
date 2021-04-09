@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Mirror;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -35,7 +36,7 @@ namespace Map
         protected Map Map;
         protected virtual void Start()
         {
-            Map = Editing ? transform.parent.GetComponent<Map>() : GameController.Instance.map;
+            Map = Editing ? transform.parent.GetComponent<Map>() : GameController.instance.map;
             var material = GetComponent<MeshRenderer>().material;
             GetComponent<MeshRenderer>().material = new Material(material);
             if(!Editing) GameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();

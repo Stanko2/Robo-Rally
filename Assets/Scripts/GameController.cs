@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Cards;
@@ -7,12 +8,14 @@ using UnityEngine;
 using UnityEngine.UI;
 using Mirror;
 using UnityEngine.Serialization;
+using Random = UnityEngine.Random;
 
 public delegate void Init();
+public delegate void GameControllerInit(GameController controller);
 public class GameController : NetworkBehaviour
 {
-    private static Player localPlayer => Player.LocalPlayer;
-    public static event Init GameControllerInitialized;
+    public Player localPlayer => Player.LocalPlayer;
+    public static event GameControllerInit GameControllerInitialized;
     public CardSlot[] slots;
     public Command[] commandTemplates;
     public Robot[] robots;
@@ -23,9 +26,18 @@ public class GameController : NetworkBehaviour
     [FormerlySerializedAs("ExecutionHighlight")] public Color executionHighlight;
     private List<Card> _cards;
     private CameraMover _mover;
-    public Match Match;
+    [NonSerialized] public Match Match;
     public Map.Map map;
-    public static GameController Instance;
+
+    public static GameController instance { get; private set; }
+    private static Dictionary<string, GameController> instances;
+    // public static GameController Instance
+    // {
+    //     get => Player.LocalPlayer.isServer ? instances[Player.LocalPlayer.matchID] : _instance;
+    // }
+    [Server]
+    public static GameController GetInstance(string MatchId) => instances[MatchId];
+    
     [FormerlySerializedAs("PlayersReady")] public int playersReady;
     [FormerlySerializedAs("CardStack")] public Stack<Command> cardStack;
     public static bool SinglePlayer = false;
@@ -34,21 +46,25 @@ public class GameController : NetworkBehaviour
         // if(instance != null){
         //     Destroy(instance.gameObject);
         // }
-        Instance = this;
+        instance = this;
         cardStack = new Stack<Command>();
         CardSlot.DragDrop = GetComponent<CommandDragDrop>();
-        GameControllerInitialized?.Invoke();
+        GameControllerInitialized?.Invoke(this);
     }
-    public override void OnStartClient(){
-        if(!isServer) map.InitMap(Match.Settings.mapData);
+    public override void OnStartClient()
+    {
+        Debug.Log("client start");
+        if(!isServer)
+        {
+            map.InitMap(Match.Settings.mapData);
+            instance = this;
+        }
         robots = (Robot[])FindObjectsOfType(typeof(Robot));
-        System.Array.Sort(robots, (a, b) => a.owningPlayerIndex.CompareTo(b.owningPlayerIndex));
+        Array.Sort(robots, (a, b) => a.owningPlayerIndex.CompareTo(b.owningPlayerIndex));
         if (Camera.main != null) _mover = Camera.main.GetComponent<CameraMover>();
         _mover.localPlayer = robots[localPlayer.playerIndex].transform;
         foreach (var robot in robots)
-        {   
-            robot.transform.position = 2*new Vector3(map.start.coords.x,0,map.start.coords.y);
-            robot.pos = map.start.coords;
+        {
             robot.map = map;   
             robot.Init();
             robot.OnCheckpointArrive(map.start, false);
@@ -58,20 +74,23 @@ public class GameController : NetworkBehaviour
     // Start is called before the first frame update
     public override void OnStartServer()
     {
+        if(instances == null) instances = new Dictionary<string, GameController>();
+        instances[Match.MatchId] = this;
         map.InitMap(Match.Settings.mapData);
         Match = Matchmaker.Instance.Matches.Find(e => e.MatchId == Match.MatchId);
-        var Players = Match.Players;
-        robots = new Robot[Players.Count];
-        Command.Random = new System.Random(Random.Range(0,int.MaxValue));
+        var Players = SinglePlayer ? new SyncListGameObject() : Match.Players;
         if (SinglePlayer)
         {
             Match = new Match();
-            Match.Players.Add(localPlayer.gameObject);
+            Players.Add(localPlayer.gameObject);
         }
+        robots = new Robot[Players.Count];
+        Command.Random = new System.Random(Random.Range(0,int.MaxValue));
         for (int i = 0; i < Players.Count; i++)
         {
             GameObject go = Instantiate(robotPrefab, 2*new Vector3(map.start.coords.x, 0, map.start.coords.y), Quaternion.identity);
             robots[i] = go.GetComponent<Robot>();
+            go.GetComponent<NetworkMatchChecker>().matchId = Match.MatchId.ToGuid();
             if (!SinglePlayer)
             {
                 NetworkServer.Spawn(go, Players[i].GetComponent<NetworkIdentity>().connectionToClient);
@@ -93,10 +112,10 @@ public class GameController : NetworkBehaviour
         return robots.FirstOrDefault(robot => robot.pos == pos);
     }
 #region CardAssignment
+    [Server]
     private IEnumerator AssignCards()
     {
-        
-        if (!SinglePlayer) yield return new WaitUntil(() => AllPlayersReady);
+        if (!SinglePlayer) yield return new WaitUntil(() => AllPlayersReady(Match.MatchId));
         else yield return null;
         
         if(cardStack.Count < Match.Players.Count * 9) ShuffleCards();
@@ -108,10 +127,11 @@ public class GameController : NetworkBehaviour
                 c.Add(cardStack.Pop().ToCardInfo());
             }
 
-            if (!SinglePlayer) TargetGetCards(c.ToArray());
+            if (!SinglePlayer) TargetGetCards(Match.Players[i].GetComponent<NetworkIdentity>().connectionToClient, c.ToArray());
             else StartCoroutine(GetCards(c.Select(Command.FromCardInfo).ToArray()));
         }
     }
+    [Server]
     private void ShuffleCards(){
         var cards = new List<Command>();
         foreach (var c in commandTemplates)
@@ -135,7 +155,7 @@ public class GameController : NetworkBehaviour
     }
 
     [TargetRpc]
-    void TargetGetCards(CardInfo[] cards)
+    void TargetGetCards(NetworkConnection conn, CardInfo[] cards)
     {
         var c = new Command[cards.Length];
         for (int i = 0; i < cards.Length; i++)
@@ -148,6 +168,7 @@ public class GameController : NetworkBehaviour
     }
 
 #endregion
+    [Server]
     public void ClientReady(int clientIndex, CardInfo[] c){
         playersReady ++;
         foreach (var command in c)
@@ -155,7 +176,7 @@ public class GameController : NetworkBehaviour
             robots[clientIndex].commands.Enqueue(Command.FromCardInfo(command));
         }
         RpcAssignCommands(clientIndex, c);
-        if(playersReady == NetworkManager.singleton.numPlayers) StartTurn();
+        if(playersReady == Match.Players.Count) StartTurn();
     }
     [ClientRpc]
     void RpcAssignCommands(int robotIndex, CardInfo[] c){
@@ -165,6 +186,7 @@ public class GameController : NetworkBehaviour
         }
     }
     
+    [Client]
     private IEnumerator GetCards(Command[] commands){
         CardSlot.DragDrop.active = true;
         _cards = new List<Card>();
@@ -187,17 +209,18 @@ public class GameController : NetworkBehaviour
     private void RpcNextTurn(int turn)
     {
         localPlayer.nextPhaseReady = false;
-        Robot[] sorted = new Robot[robots.Length];
-        System.Array.Copy(robots, sorted, robots.Length); 
-        System.Array.Sort(sorted, (a, b) => b.commands.Peek().weight.CompareTo(a.commands.Peek().weight));
+        List<Robot> activeRobots = robots.ToList().FindAll(e => !e.IsDead);
+        Robot[] sorted = new Robot[activeRobots.Count];
+        Array.Copy(activeRobots.ToArray(), sorted, activeRobots.Count); 
+        Array.Sort(sorted, (a, b) => b.commands.Peek().weight.CompareTo(a.commands.Peek().weight));
         slots[turn].card.Color = executionHighlight;
         if (turn > 0) slots[turn - 1].card.Color = Color.white;
         StartCoroutine(MoveRobots(sorted));
     }
 
-    private IEnumerator MoveRobots(Robot[] sorted)
+    [Client]
+    private IEnumerator MoveRobots(IEnumerable<Robot> sorted)
     {
-        localPlayer.nextPhaseReady = false;
         foreach (var robot in sorted)
         {
             robot.StartCoroutine(robot.StartNext());
@@ -210,16 +233,15 @@ public class GameController : NetworkBehaviour
     void RpcUpdateMap()
     {
         localPlayer.nextPhaseReady = false;
-        for (var i = 0; i < map.width; i++)
+        StartCoroutine(MapUpdate());
+    }
+    [Client]
+    private IEnumerator MapUpdate()
+    {
+        if (robots.Any(e => map[e.pos] is ConveyorBelt))
         {
-            for (var j = 0; j < map.height; j++)
-            {
-                if (map.tiles[i, j] is ConveyorBelt)
-                {
-                    var cb = (ConveyorBelt) map.tiles[i, j];
-                    cb.StartCoroutine(cb.Move());
-                }
-            }
+            MoveConveyorBelts();
+            yield return new WaitForSeconds(1f);
         }
 
         foreach (var robot in robots)
@@ -227,7 +249,24 @@ public class GameController : NetworkBehaviour
             robot.Health.Shoot();
             robot.UpdateInvincible();
         }
+        localPlayer.CmdNextPhase();
     }
+
+    [Client]
+    private void MoveConveyorBelts()
+    {
+        for (var i = 0; i < map.width; i++)
+        {
+            for (var j = 0; j < map.height; j++)
+            {
+                if (!(map.tiles[i, j] is ConveyorBelt)) continue;
+                var cb = (ConveyorBelt) map.tiles[i, j];
+                cb.StartCoroutine(cb.Move());
+            }
+        }
+        
+    }
+
     [ClientRpc]
     private void RpcEndTurn(){
         slots[4].card.Color = Color.white;
@@ -256,29 +295,57 @@ public class GameController : NetworkBehaviour
         CardSlot.DragDrop.active = false;
     }
 
+    [Server]
     private IEnumerator NextTurn(){
         RpcStartTurn();
         for (int turn = 0; turn < 5; turn++)
         {
+            SetAllPlayersUnready();
+            yield return new WaitUntil(() => AllPlayersUnready(Match.MatchId));
             RpcNextTurn(turn);
-            yield return new WaitUntil(() => AllPlayersReady);
+            Debug.Log($"Turn {turn}: robots moved");
+            yield return new WaitUntil(() => AllPlayersReady(Match.MatchId));
+            SetAllPlayersUnready();
+            yield return new WaitUntil(() => AllPlayersUnready(Match.MatchId));
             RpcUpdateMap();
-            //yield return new WaitUntil(() => NextPhaseReady == NetworkManager.singleton.numPlayers);
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(CalculateWaitTime());
+            Debug.Log($"Turn {turn}: Map updated");
+            yield return new WaitUntil(() => AllPlayersReady(Match.MatchId));
         }
         playersReady = 0;
         RpcEndTurn();
         StartCoroutine(AssignCards());
     }
 
-    private static bool AllPlayersReady
+    private float CalculateWaitTime()
     {
-        get
+        float waitTime = .2f;
+        if (robots.Any(robot => map[robot.pos] is ConveyorBelt))
         {
-            return Instance.Match.Players.All(e=>e.GetComponent<Player>().nextPhaseReady);
+            waitTime += 1;
+        }
+        
+        return waitTime;
+    }
+    
+    private void SetAllPlayersUnready()
+    {
+        foreach (var player in Match.Players)
+        {
+            player.GetComponent<Player>().nextPhaseReady = false;
         }
     }
 
+    private static bool AllPlayersReady(string matchID)
+    {
+        return GetInstance(matchID).Match.Players.All(e=>e.GetComponent<Player>().nextPhaseReady);
+    }
+
+    private static bool AllPlayersUnready(string matchID)
+    {
+        return GetInstance(matchID).Match.Players.All(e=>!e.GetComponent<Player>().nextPhaseReady);
+    }
+    
     private bool AllSlotsFull{
         get
         {
@@ -288,6 +355,17 @@ public class GameController : NetworkBehaviour
     // Update is called once per frame
     private void Update()
     {
+        if (Application.isBatchMode) return;
         startButton.interactable = AllSlotsFull && !localPlayer.cardsReady;
+        List<Vector2> activeCanvasPositions = new List<Vector2>();
+        var localRobot = robots.First(e => e.hasAuthority);
+        activeCanvasPositions.Add(localRobot.pos);
+        localRobot.canvas.gameObject.SetActive(true);
+        foreach (var robot in robots)
+        {
+            if (activeCanvasPositions.Contains(robot.pos)) continue;
+            robot.canvas.gameObject.SetActive(true);
+            activeCanvasPositions.Add(robot.pos);
+        }
     }
 }

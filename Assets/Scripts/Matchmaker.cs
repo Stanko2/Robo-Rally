@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -32,6 +33,20 @@ public class Match
         this.Settings = settings;
     }
 
+    public GameResponse ToGameResponse()
+    {
+        return new GameResponse
+        {
+            matchId = MatchId,
+            Players = Players.Count,
+            MaxPlayers = Settings.maxPlayers,
+            MapName = Settings.map,
+            ServerName = Settings.serverName,
+            uri = new Uri("about:blank"),
+            serverId = Random.Range(Int32.MinValue, Int32.MaxValue),
+        };
+    }
+    
     public override string ToString()
     {
         return $"Match {MatchId}: {Players.Count} players started: {Started}";
@@ -134,12 +149,7 @@ public class Matchmaker : NetworkBehaviour
 
     public static bool ValidateID(string id)
     {
-        if (id.Length != MATCH_ID_LENGTH)
-        {
-            return false;
-        }
-
-        return id.All(i => i >= 65 && i <= 65 + 26);
+        return id.Length == MATCH_ID_LENGTH && id.All(i => i >= 65 && i <= 65 + 26);
     }
 
     public void PlayerReady(Player player)
@@ -148,18 +158,31 @@ public class Matchmaker : NetworkBehaviour
         match.PlayersReady++;
         if (match.PlayersReady == match.Players.Count)
         {
-            StartGame(match);
+            StartCoroutine(StartGame(match));
         }
     }
 
-    private void StartGame(Match match)
+    private IEnumerator StartGame(Match match)
     {
+        match.Started = true;
+        match.PlayersReady = 0;
         foreach (var player in match.Players)
         {
             player.GetComponent<Player>().RpcOnStartGame(match);
         }
-        GameController.GameControllerInitialized += () => GameController.Instance.Match = match;
-        NetworkManager.singleton.ServerChangeScene("Main");
+
+        var players = match.Players.ToList().Select(e => e.GetComponent<NetworkIdentity>());
+        
+        GameController.GameControllerInitialized += (e) =>
+        {
+            e.Match = match;
+            e.GetComponent<NetworkMatchChecker>().matchId = match.MatchId.ToGuid();
+        };
+        
+        (NetworkManager.singleton as MyNetworkManager)?.ChangeSceneForPlayers(players.ToArray(), "Main");
+        yield return new WaitUntil(() => match.PlayersReady == match.Players.Count);
+        Debug.Log($"{match.Players.Count} clients loaded, spawning gameController ... ");
+        
     }
 }
 

@@ -25,7 +25,7 @@ namespace Cards
             Command c = (Command)Command.CreateInstance(typeof(Command));
             c.weight = info.Weight;
             c.type = info.Type;
-            c.thumbnail = GameController.Instance.commandTemplates[(int)c.type].thumbnail;
+            c.thumbnail = GameController.instance.commandTemplates[(int)c.type].thumbnail;
             return c;
         }
         public GameController.CardInfo ToCardInfo(){

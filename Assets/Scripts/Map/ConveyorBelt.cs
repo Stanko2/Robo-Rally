@@ -9,24 +9,30 @@ namespace Map
         public enum Type{Straight, Left, Right}
         public Type type;
         private MeshRenderer _renderer;
+        private static readonly int MoveAmount = Shader.PropertyToID("MoveAmount");
+
         protected override void Start()
         {
             base.Start();
             _renderer = GetComponent<MeshRenderer>();
         }
     
-        public IEnumerator Move(){
+        public IEnumerator Move()
+        {
             MoveRobots();
-            _renderer.material.SetFloat("StartTime", Time.time);
-            _renderer.material.SetInt("Move",1);
-            // if(Robot != null) yield return new WaitWhile(()=> Robot.moving);
-            yield return new WaitForSeconds(1);
-            _renderer.material.SetInt("Move",0);
+            float currMove = 0;
+            while (currMove < 1)
+            {
+                currMove += Time.deltaTime;
+                _renderer.material.SetFloat(MoveAmount, currMove);
+                yield return new WaitForEndOfFrame();
+            }
+            _renderer.material.SetFloat(MoveAmount, 1);
         }
 
         private void MoveRobots()
         {
-            foreach (var robot in GameController.Instance.robots)
+            foreach (var robot in GameController.instance.robots)
             {
                 if (robot.pos != coords) continue;
                 if (robot.CanMove((Direction + 2) % 4))

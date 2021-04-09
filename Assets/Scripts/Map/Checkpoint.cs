@@ -15,7 +15,7 @@ namespace Map
         {
             base.Start();
             indexText.text = index.ToString();
-            _finish = index == CheckpointCount;
+            _finish = index == CheckpointCount - 1;
             if (_finish) indexText.color = Color.red;
         }
 
@@ -23,11 +23,9 @@ namespace Map
         {
             base.OnRobotArrive();
             robot.GetComponent<IDamageable>().Heal(healthRegenerated);
-            if (index == robot.CheckpointsCount + 1 && robot.hasAuthority)
-            {
-                GetComponent<MeshRenderer>().material.mainTexture = checkedTexture;
-                robot.OnCheckpointArrive(this, _finish);
-            }   
+            if (index != robot.CheckpointsCount + 1 || !robot.hasAuthority) return;
+            GetComponent<MeshRenderer>().material.mainTexture = checkedTexture;
+            robot.OnCheckpointArrive(this, _finish);
         }
 
         public override void ShowTilePropertiesUi()

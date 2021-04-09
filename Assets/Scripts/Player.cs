@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -91,6 +92,7 @@ public class Player : NetworkBehaviour
     public override void OnStartLocalPlayer()
     {
         LocalPlayer = this;
+        SceneManager.sceneLoaded += OnGameLoaded; 
         base.OnStartLocalPlayer();
     }
 
@@ -129,7 +131,7 @@ public class Player : NetworkBehaviour
     private void RpcPlayerDisconnected()
     {
         ClientDisconnect();
-
+            
         if (isLocalPlayer)
         {
             SceneManager.LoadScene("MultiplayerMenu");
@@ -139,6 +141,7 @@ public class Player : NetworkBehaviour
 
     private void ClientDisconnect()
     {
+        if (hasAuthority) SceneManager.sceneLoaded -= OnGameLoaded;
         if (lobbyPlayer != null)
         {
             Destroy(lobbyPlayer.gameObject);
@@ -186,6 +189,26 @@ public class Player : NetworkBehaviour
     {
         MultiplayerController.Instance.SpawnLobbyPlayer(this);
     }
+
+    [Command]
+    public void CmdGetAvailableMatches()
+    {
+        List<GameResponse> available = new List<GameResponse>();
+        foreach (var match in Matchmaker.Instance.Matches)
+        {
+            if (!match.Started && match.Settings.advertise && match.Players.Count < match.Settings.maxPlayers)
+            {
+                available.Add(match.ToGameResponse());
+            }
+        }
+        TargetOnMatchesReceived(available.ToArray());
+    }
+
+    [TargetRpc]
+    private void TargetOnMatchesReceived(GameResponse[] matches)
+    {
+        MultiplayerController.Instance.ShowAvailableMatches(matches);
+    }
     
     [Command]
     private void CmdJoinGame(string id)
@@ -216,27 +239,44 @@ public class Player : NetworkBehaviour
     {
         if (hasAuthority)
         {
-            GameController.GameControllerInitialized += () =>
+            
+            GameController.GameControllerInitialized += (e) =>
             {
-                GameController.Instance.Match = match;
-                GameController.Instance.startButton.onClick.AddListener(SetCardsReady);
+                e.Match = match;
+                e.startButton.onClick.AddListener(SetCardsReady);
+                SceneManager.sceneLoaded -= OnGameLoaded;
             };    
         }
     }
 
+    private void OnGameLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Debug.Log(scene.name);
+        if (scene.name != "Main") return;
+        CmdGameLoaded();
+    }
+
+    [Command]
+    private void CmdGameLoaded()
+    {
+        var match = Matchmaker.Instance.Matches.Find(e => e.MatchId == matchID);
+        Debug.Log("player loaded");
+        match.PlayersReady++;
+    }
+
     private void SetCardsReady(){
         if(cardsReady) return;
-        GameController.CardInfo[] commands = new GameController.CardInfo[GameController.Instance.slots.Length];
+        GameController.CardInfo[] commands = new GameController.CardInfo[GameController.instance.slots.Length];
         for (int i = 0; i < commands.Length; i++)
         {
-            commands[i] = GameController.Instance.slots[i].card.command.ToCardInfo();
+            commands[i] = GameController.instance.slots[i].card.command.ToCardInfo();
         }
         cardsReady = true;
         CmdClientReady(playerIndex, commands);
     }
     [Command]
     void CmdClientReady(int clientIndex, GameController.CardInfo[] cards){
-        GameController.Instance.ClientReady(clientIndex, cards);
+        GameController.GetInstance(matchID).ClientReady(clientIndex, cards);
     }
 
     [Command]
