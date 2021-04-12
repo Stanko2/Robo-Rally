@@ -16,7 +16,7 @@ namespace Cards
 
         [HideInInspector] public List<Card> cards;
         private void Start() {
-            // slots = (CardSlot[])FindObjectsOfType(typeof(CardSlot));
+            GameControllerRefs.assignValues(this);
         }
         public void Drop(Card card)
         {

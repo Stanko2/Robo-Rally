@@ -68,6 +68,8 @@ public class Robot : NetworkBehaviour
             return GameController.instance.robots.Where(robot => robot != this).All(robot => robot.pos != pos);
         }
     }
+    
+    
 
     public override void OnStartAuthority()
     {
@@ -189,6 +191,18 @@ public class Robot : NetworkBehaviour
     public void Dead()
     {
         _dead = true;
+    }
+
+    public override void OnStopClient()
+    {
+        if(!hasAuthority) GameController.instance.PlayerDisconnect(this);
+        base.OnStopClient();
+    }
+
+    public override void OnStopServer()
+    {
+        GameController.instance.PlayerDisconnect(this);
+        base.OnStopServer();
     }
 
     public void Respawn()

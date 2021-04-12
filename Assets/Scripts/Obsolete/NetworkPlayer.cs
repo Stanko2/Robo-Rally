@@ -146,12 +146,12 @@ public class NetworkPlayer : NetworkBehaviour {
             SceneManager.sceneLoaded += (scene,loadSceneMode) => {
                 if(scene.name == "Main"){
                     Debug.Log("Scene Loaded");
-                    GameController.GameControllerInitialized += (e) => 
-                    {
-                        //GameController.Instance.localPlayer = this;
-                        
-                        e.startButton.onClick.AddListener(SetCardsReady);
-                    };
+                    // GameController.GameControllerInitialized += () => 
+                    // {
+                    //     //GameController.Instance.localPlayer = this;
+                    //     
+                    //     e.startButton.onClick.AddListener(SetCardsReady);
+                    // };
                 }
             };
         }

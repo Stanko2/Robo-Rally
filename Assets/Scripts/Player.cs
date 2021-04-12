@@ -15,6 +15,7 @@ public class Player : NetworkBehaviour
     private NetworkMatchChecker _networkMatchChecker;
     public LobbyPlayer lobbyPlayer;
     private string _playerName;
+    private Match currentMatch;
 
     public string PlayerName
     {
@@ -92,7 +93,6 @@ public class Player : NetworkBehaviour
     public override void OnStartLocalPlayer()
     {
         LocalPlayer = this;
-        SceneManager.sceneLoaded += OnGameLoaded; 
         base.OnStartLocalPlayer();
     }
 
@@ -141,7 +141,6 @@ public class Player : NetworkBehaviour
 
     private void ClientDisconnect()
     {
-        if (hasAuthority) SceneManager.sceneLoaded -= OnGameLoaded;
         if (lobbyPlayer != null)
         {
             Destroy(lobbyPlayer.gameObject);
@@ -239,17 +238,21 @@ public class Player : NetworkBehaviour
     {
         if (hasAuthority)
         {
-            
-            GameController.GameControllerInitialized += (e) =>
+            SceneManager.LoadSceneAsync("Main").completed += (e) =>
             {
-                e.Match = match;
-                e.startButton.onClick.AddListener(SetCardsReady);
-                SceneManager.sceneLoaded -= OnGameLoaded;
-            };    
+                OnGameLoaded(SceneManager.GetActiveScene());
+            };
+            currentMatch = match;
         }
     }
 
-    private void OnGameLoaded(Scene scene, LoadSceneMode mode)
+    public void InitializeGameController()
+    {
+        GameController.instance.InitializeMatch(currentMatch);
+        GameController.instance.startButton.onClick.AddListener(SetCardsReady);
+    }
+
+    private void OnGameLoaded(Scene scene)
     {
         Debug.Log(scene.name);
         if (scene.name != "Main") return;

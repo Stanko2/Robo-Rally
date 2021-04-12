@@ -92,6 +92,7 @@ public class Menu : MonoBehaviour
         NetworkManager.singleton.StartHost();
         multiplayerButton.interactable = true;
         cantConnectUI.SetActive(false);
+        Multiplayer();
     }
     
     private void Quit(){

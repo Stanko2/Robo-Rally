@@ -8,14 +8,15 @@ using UnityEngine;
 using UnityEngine.UI;
 using Mirror;
 using UnityEngine.Serialization;
+using UnityEngine.SocialPlatforms.Impl;
 using Random = UnityEngine.Random;
 
 public delegate void Init();
-public delegate void GameControllerInit(GameController controller);
+public delegate void GameControllerInit();
 public class GameController : NetworkBehaviour
 {
     public Player localPlayer => Player.LocalPlayer;
-    public static event GameControllerInit GameControllerInitialized;
+    public event GameControllerInit GameControllerInitialized;
     public CardSlot[] slots;
     public Command[] commandTemplates;
     public Robot[] robots;
@@ -31,10 +32,7 @@ public class GameController : NetworkBehaviour
 
     public static GameController instance { get; private set; }
     private static Dictionary<string, GameController> instances;
-    // public static GameController Instance
-    // {
-    //     get => Player.LocalPlayer.isServer ? instances[Player.LocalPlayer.matchID] : _instance;
-    // }
+
     [Server]
     public static GameController GetInstance(string MatchId) => instances[MatchId];
     
@@ -43,25 +41,36 @@ public class GameController : NetworkBehaviour
     public static bool SinglePlayer = false;
     //TODO: Implement winning and restarting
     private void OnEnable() {
-        // if(instance != null){
-        //     Destroy(instance.gameObject);
-        // }
+        GameControllerRefs.assignValues(this);
+
         instance = this;
         cardStack = new Stack<Command>();
         CardSlot.DragDrop = GetComponent<CommandDragDrop>();
-        GameControllerInitialized?.Invoke(this);
+
     }
+
     public override void OnStartClient()
     {
-        Debug.Log("client start");
         if(!isServer)
         {
-            map.InitMap(Match.Settings.mapData);
             instance = this;
+            localPlayer.InitializeGameController();
         }
+        if (Camera.main != null) _mover = Camera.main.GetComponent<CameraMover>();
+        
+    }
+
+    public void InitializeMatch(Match match)
+    {
+        Match = match;
+        map.InitMap(match.Settings.mapData);
+    }
+
+    [ClientRpc]
+    private void RpcInitRobots()
+    {
         robots = (Robot[])FindObjectsOfType(typeof(Robot));
         Array.Sort(robots, (a, b) => a.owningPlayerIndex.CompareTo(b.owningPlayerIndex));
-        if (Camera.main != null) _mover = Camera.main.GetComponent<CameraMover>();
         _mover.localPlayer = robots[localPlayer.playerIndex].transform;
         foreach (var robot in robots)
         {
@@ -71,13 +80,19 @@ public class GameController : NetworkBehaviour
         }
         localPlayer.CmdNextPhase();
     }
+    
     // Start is called before the first frame update
     public override void OnStartServer()
     {
         if(instances == null) instances = new Dictionary<string, GameController>();
+        if (Match == null)
+        {
+            GameControllerInitialized?.Invoke();
+            Debug.Log("Match was set to: " + Match);
+        }
         instances[Match.MatchId] = this;
         map.InitMap(Match.Settings.mapData);
-        Match = Matchmaker.Instance.Matches.Find(e => e.MatchId == Match.MatchId);
+        if(isClient) Match = Matchmaker.Instance.Matches.Find(e => e.MatchId == Match.MatchId);
         var Players = SinglePlayer ? new SyncListGameObject() : Match.Players;
         if (SinglePlayer)
         {
@@ -104,6 +119,7 @@ public class GameController : NetworkBehaviour
                 NetworkServer.Spawn(go, localPlayer.connectionToClient);    
             }
         }
+        RpcInitRobots();
         StartCoroutine(AssignCards());        
     }
 
@@ -352,6 +368,14 @@ public class GameController : NetworkBehaviour
             return slots.All(slot => slot.card);
         }
     }
+    
+    public void PlayerDisconnect(Robot robot)
+    {
+        List<Robot> r = robots.ToList();
+        r.Remove(robot);
+        robots = r.ToArray();
+    }
+
     // Update is called once per frame
     private void Update()
     {

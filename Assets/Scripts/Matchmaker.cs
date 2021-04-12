@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Mirror;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Random = UnityEngine.Random;
 
 
@@ -65,6 +66,7 @@ public class Matchmaker : NetworkBehaviour
     public SyncListMatch Matches = new SyncListMatch();
     public SyncListString Ids = new SyncListString();
     private const int MATCH_ID_LENGTH = 5;
+    public GameObject gameControllerPrefab;
     
     private void Awake()
     {
@@ -78,6 +80,7 @@ public class Matchmaker : NetworkBehaviour
 
     public bool HostGame(string id, GameObject hostPlayer, MatchSettings settings)
     {
+        if (isClient && Matches.Count > 0) return false;
         if (!Ids.Contains(id))
         {
             Matches.Add(new Match(id, hostPlayer, settings));
@@ -171,17 +174,18 @@ public class Matchmaker : NetworkBehaviour
             player.GetComponent<Player>().RpcOnStartGame(match);
         }
 
-        var players = match.Players.ToList().Select(e => e.GetComponent<NetworkIdentity>());
+        if(!isClient) SceneManager.LoadScene("Main", LoadSceneMode.Additive);
         
-        GameController.GameControllerInitialized += (e) =>
-        {
-            e.Match = match;
-            e.GetComponent<NetworkMatchChecker>().matchId = match.MatchId.ToGuid();
-        };
-        
-        (NetworkManager.singleton as MyNetworkManager)?.ChangeSceneForPlayers(players.ToArray(), "Main");
         yield return new WaitUntil(() => match.PlayersReady == match.Players.Count);
         Debug.Log($"{match.Players.Count} clients loaded, spawning gameController ... ");
+        
+        GameObject go = Instantiate(gameControllerPrefab);
+        go.GetComponent<NetworkMatchChecker>().matchId = match.MatchId.ToGuid();
+        go.GetComponent<GameController>().GameControllerInitialized +=() =>
+        {
+            go.GetComponent<GameController>().Match = match;
+        }; 
+        NetworkServer.Spawn(go);
         
     }
 }

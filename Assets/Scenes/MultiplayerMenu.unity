@@ -98,7 +98,7 @@ LightmapSettings:
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 0}
-  m_UseShadowmask: 1
+  m_UseShadowmask: 0
 --- !u!196 &4
 NavMeshSettings:
   serializedVersion: 2
@@ -4040,6 +4040,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0
+  gameControllerPrefab: {fileID: 774320058337382234, guid: 52d2095039e0c2bc09823edc7308b578,
+    type: 3}
 --- !u!114 &1837512127
 MonoBehaviour:
   m_ObjectHideFlags: 0
